@@ -1,0 +1,5 @@
+Rainbow Node Controller
+=============================
+
+Purpose
+-------
