@@ -68,6 +68,8 @@ class RcpuMaster extends Thread {
 				System.out.println(this.sgIn.readLine());
 				Thread.sleep(5000);
 			}
+			catch (InterruptedException e) {
+			}
 			catch (Exception e) {
 				System.out.println("FAILED!");
 				System.out.println(e);
