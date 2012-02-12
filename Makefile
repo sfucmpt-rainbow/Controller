@@ -1,5 +1,5 @@
 VERSION=0.0.1
-SRCDIR=src
+SRCDIR=src/rcpu
 BINDIR=bin
 JAVAC=/usr/bin/javac
 JAVALIB=/usr/share/java/lib
@@ -13,8 +13,8 @@ all:
 	@mv $(SRCDIR)/*.class $(BINDIR)/;
 
 install:
-	@mkdir -p $(JAVALIB);
-	@cp -rf $(BINDIR)/* $(JAVALIB);
+	@mkdir -p $(JAVALIB)/rcpu;
+	@cp -rf $(BINDIR)/* $(JAVALIB)/rcpu;
 
 clean:
 	@rm -rf $(BINDIR);
