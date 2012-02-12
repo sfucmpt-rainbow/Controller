@@ -18,11 +18,13 @@ import java.util.PriorityQueue;
 import java.math.BigInteger;
 
 class RcpuMaster extends Thread {
-	private Socket serviceGateway = null;
-	private PrintWriter sgOut = null;
+	private final int MAX_NODES = 1000;      // the underlying ADT under a priority queue in an array, so we should set a upper limit
+
+	private Socket serviceGateway = null;    // Note that this is mainly here for placeholding puporses, we should rewrite the communication
+	private PrintWriter sgOut = null;        // into a library
 	private BufferedReader sgIn = null;
 	private Queue<BigInteger> partitionIndices = new LinkedList<BigInteger>();
-	private PriorityQueue<RcpuWorker> nodes = new PriorityQueue<RcpuWorker>();
+	private PriorityQueue<RcpuWorker> nodes = new PriorityQueue<RcpuWorker>(MAX_NODES);   // we might want to get rid of this later.
 	private String keyspace = null;
 	
 	public RcpuMaster(String sgHost) throws Exception {

@@ -4,7 +4,7 @@ import java.util.Queue;
 import java.util.LinkedList;
 
 // A core can be thought of as a node
-class RcpuWorker extends Thread {
+class RcpuWorker extends Thread implements Comparable<RcpuWorker> {
 	private int id;				   			// id
 	private Queue<WorkParcel> work = new LinkedList<WorkParcel>();
 
@@ -13,6 +13,15 @@ class RcpuWorker extends Thread {
 	}
 
 	public void run() {
+	}
+
+	public int compareTo(RcpuWorker other) {
+		if (this.workSize() == other.workSize()) {
+			return 0;
+		}
+		else {
+			return this.workSize() < other.workSize()? -1 : 1;
+		}
 	}
 
 	public int addWork(WorkParcel work) {
