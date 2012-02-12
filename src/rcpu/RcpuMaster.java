@@ -8,6 +8,7 @@
  * is also aware of the partitions assigned from the sch-
  * eduler and is responsible for calculating the strings.
  */
+package rcpu;
 
 import java.io.*;
 import java.net.*;
@@ -71,5 +72,4 @@ class RcpuMaster extends Thread {
 			}
 		}	
 	}
-	
 }
