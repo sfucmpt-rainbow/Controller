@@ -1,20 +1,19 @@
 VERSION=0.0.1
-SRCDIR=src/rcpu
+PKGNAME=prainbow
 BINDIR=bin
 JAVAC=/usr/bin/javac
-JAVALIB=/usr/share/java/lib
-ERLOTPJAR=/usr/share/java/lib/OtpErlang.jar
+JAVALIB=/usr/share/java/
+GSONJAR=/usr/share/java/google-gson-2.1/gson-2.1.jar
+JUNITJAR=/usr/share/java/junit.jar
+SRCFILES=`find ./src -name *.java`
 
 all:
 	@mkdir -p $(BINDIR);
-	@cd $(SRCDIR);
-	@$(JAVAC) -cp $(SRCDIR):$(ERLOTPJAR) $(SRCDIR)/*.java
-	@cd ../;
-	@mv $(SRCDIR)/*.class $(BINDIR)/;
+	@$(JAVAC) -Xlint:unchecked -cp $(GSONJAR):$(JUNITJAR):$(JAVALIB) $(SRCFILES) -d $(BINDIR) 
 
 install:
-	@mkdir -p $(JAVALIB)/rcpu;
-	@cp -rf $(BINDIR)/* $(JAVALIB)/rcpu;
+	@mkdir -p $(JAVALIB)/$(PKGNAME)
+	@cp -rf $(BINDIR)/$(PKGNAME)/* $(JAVALIB)/$(PKGNAME)/
 
 clean:
 	@rm -rf $(BINDIR);
