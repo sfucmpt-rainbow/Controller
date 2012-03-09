@@ -1,6 +1,7 @@
 package rainbow.controller.application;
 
 import rainbow.controller.events.Event;
+import rainbow.controller.node.Node;
 import rainbowpc.controller.*;
 import rainbowpc.Message;
 import rainbowpc.RainbowException;
@@ -9,14 +10,19 @@ import java.io.IOException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.TreeMap;
+import java.util.Timer;
+import java.util.PriorityQueue;
 
 public class Controller {
-	static ControllerProtocol protocol;
+	private static final int NODE_REGISTER_TIMEOUT = 5000; //10 sec
 
-	static String id = "uninitialized";
-	static int stringLength = 0;
-	static String target;
-	static String algorithm;
+	private static ControllerProtocol protocol;
+
+	private static String id = "uninitialized";
+	private static int stringLength = 0;
+	private static String target;
+	private static String algorithm;
+	private static PriorityQueue<Node> nodes = new PriorityQueue<Node>();
 
 	static TreeMap<String, Event> eventMapping = new TreeMap<String, Event>();
 	static {
@@ -24,7 +30,7 @@ public class Controller {
 			public void action(Message msg) {
 				ControllerBootstrapMessage bootstrap = (ControllerBootstrapMessage)msg;
 				id = bootstrap.id;
-				System.out.println("Set id to " + id);
+				log("Set id to " + id);
 			}
 		});
 
@@ -41,9 +47,28 @@ public class Controller {
 			public void action(Message msg) {
 				WorkBlockSetup setup = (WorkBlockSetup)msg;
 				stringLength = setup.getStringLength();
-				System.out.println("Length set to " + id);
+				log("Length set to " + id);
 			}
 		});
+
+		eventMapping.put(NewNodeMessage.LABEL, new Event() {
+			public void action(Message msg) {
+				NewNodeMessage nodeMsg = (NewNodeMessage)msg;
+				Node node = new Node(nodeMsg);
+				nodes.offer(node);
+				log(node.getName() + " has joined the collective!");
+			}
+		});
+
+	}
+
+	private static void log(String msg) {
+		// System.out for now
+		System.out.println(msg);
+	}
+
+	private static void warn(String msg) {
+		System.out.println("[* WARN *] " + msg);
 	}
 
 	private static boolean hasValidArguments(String[] args) {
@@ -81,7 +106,7 @@ public class Controller {
 					event.run(msg);
 				}
 				else {
-					System.out.println("Message with method " + msg.getMethod() + " dropped");
+					warn("Message with method " + msg.getMethod() + " dropped");
 				}
 			}
 			catch (InterruptedException e) {
