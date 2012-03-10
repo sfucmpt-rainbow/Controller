@@ -1,5 +1,5 @@
 VERSION=0.0.1
-PKGNAME=prainbow
+PKGNAME=rainbow
 BINDIR=bin
 JAVAC=/usr/bin/javac
 JAVALIB=/usr/share/java/
