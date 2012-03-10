@@ -2,6 +2,7 @@ package rainbow.controller.application;
 
 import rainbow.controller.events.Event;
 import rainbow.controller.node.Node;
+import rainbow.controller.factory.ControllerFactory;
 import rainbowpc.controller.*;
 import rainbowpc.Message;
 import rainbowpc.RainbowException;
@@ -14,87 +15,93 @@ import java.util.Timer;
 import java.util.PriorityQueue;
 
 public class Controller {
-	private static final int NODE_REGISTER_TIMEOUT = 5000; //10 sec
+	////////////////////////////////////////////////////////////////////////////
+	// Attributes
+	//
+	private static final int NODE_REGISTER_TIMEOUT = 5000; //5 sec
+	private static final int NODE_PREALLOCATE_CAPACITY = 50;
 
-	private static ControllerProtocol protocol;
+	private ControllerProtocol protocol;
 
-	private static String id = "uninitialized";
-	private static int stringLength = 0;
-	private static String target;
-	private static String algorithm;
-	private static PriorityQueue<Node> nodes = new PriorityQueue<Node>();
+	private String id = "uninitialized";
+	private int stringLength = 0;
+	private String target;
+	private String algorithm;
+	private PriorityQueue<Node> nodes = new PriorityQueue<Node>(NODE_PREALLOCATE_CAPACITY);
 
-	static TreeMap<String, Event> eventMapping = new TreeMap<String, Event>();
-	static {
-		eventMapping.put(ControllerBootstrapMessage.LABEL, new Event() {
-			public void action(Message msg) {
-				ControllerBootstrapMessage bootstrap = (ControllerBootstrapMessage)msg;
-				id = bootstrap.id;
-				log("Set id to " + id);
-			}
-		});
-
-		eventMapping.put(NewQuery.LABEL, new Event() {
-			public void action(Message msg) {
-				NewQuery query = (NewQuery)msg;
-				target = query.getQuery();
-				algorithm = query.getHashMethod();
-			}
-		});
-				
-		
-		eventMapping.put(WorkBlockSetup.LABEL, new Event() {
-			public void action(Message msg) {
-				WorkBlockSetup setup = (WorkBlockSetup)msg;
-				stringLength = setup.getStringLength();
-				log("Length set to " + id);
-			}
-		});
-
-		eventMapping.put(NewNodeMessage.LABEL, new Event() {
-			public void action(Message msg) {
-				NewNodeMessage nodeMsg = (NewNodeMessage)msg;
-				Node node = new Node(nodeMsg);
-				nodes.offer(node);
-				log(node.getName() + " has joined the collective!");
-			}
-		});
-
+	////////////////////////////////////////////////////////////////////////////
+	// Constructors
+	//
+	public Controller(ControllerProtocol protocol) {
+		this.protocol = protocol;
 	}
 
-	private static void log(String msg) {
+	////////////////////////////////////////////////////////////////////////////
+	// Getters
+	//	
+	public String getId() {
+		return id;
+	}
+
+	public int getStringLength() {
+		return stringLength;
+	}
+
+	public String getTarget() {
+		return target;
+	}
+
+	public String getAlgorithm() {
+		return algorithm;
+	}
+
+	public PriorityQueue<Node> getNodes() {
+		return nodes;
+	}
+
+	////////////////////////////////////////////////////////////////////////////
+	// Setters
+	//
+
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	public void setStringLength(int length) {
+		stringLength = length;
+	}
+
+	public void setTarget(String target) {
+		this.target = target;
+	}
+
+	public void setAlgorithm(String algorithm) {
+		this.algorithm = algorithm;
+	}
+
+	////////////////////////////////////////////////////////////////////////////
+	// Node priority queue management
+	//
+	public void addNode(Node node) {
+		nodes.offer(node);
+	}	
+
+	////////////////////////////////////////////////////////////////////////////
+	// Helper methods
+	//
+	public void log(String msg) {
 		// System.out for now
 		System.out.println(msg);
 	}
 
-	private static void warn(String msg) {
+	public void warn(String msg) {
 		System.out.println("[* WARN *] " + msg);
 	}
 
-	private static boolean hasValidArguments(String[] args) {
-		return args.length == 1;
-	}
-
-	private static ControllerProtocol connectToScheduler (String host) {
-		try {
-			return new ControllerProtocol(host);
-		}
-		// we don't care what exception is raised, just that we can't connect
-		catch (Exception e) {
-		}
-		return null;
-	}
-
-	public static void main(String[] args) {
-		if (!hasValidArguments(args)) {
-			System.err.println("Controller takes the scheduler host as its only argument");
-			System.exit(1);
-		}
-		protocol = connectToScheduler(args[0]);
-		if (protocol == null) {
-			System.err.println("Failed to connect o scheduler " + args[0]);
-			System.exit(1);
-		}
+	/////////////////////////////////////////////////////////////////////////////
+	// Main loop
+	//
+	public void run(TreeMap<String, Event> eventMapping) {
 		Executor protocolExecutor = Executors.newSingleThreadExecutor();
 		protocolExecutor.execute(protocol);
 		protocol.setInterruptThread(Thread.currentThread());
@@ -117,6 +124,37 @@ public class Controller {
 			protocol.shutdown();
 		}
 		catch (Exception e) {}
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////////
+	// Static main entry methods
+	//
+	private static boolean hasValidArguments(String[] args) {
+		return args.length == 1;
+	}
+
+	private static ControllerProtocol connectToScheduler (String host) {
+		try {
+			return new ControllerProtocol(host);
+		}
+		// we don't care what exception is raised, just that we can't connect
+		catch (Exception e) {
+		}
+		return null;
+	}
+
+	public static void main(String[] args) {
+		if (!hasValidArguments(args)) {
+			System.err.println("Controller takes the scheduler host as its only argument");
+			System.exit(1);
+		}
+		ControllerProtocol protocol = connectToScheduler(args[0]);
+		if (protocol == null) {
+			System.err.println("Failed to connect o scheduler " + args[0]);
+			System.exit(1);
+		}
+		Controller application = new Controller(protocol);
+		application.run(ControllerFactory.getDefaultMapping(application));
 		System.exit(0);
 	}
 }
