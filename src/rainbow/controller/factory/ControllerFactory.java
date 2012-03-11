@@ -23,7 +23,10 @@ public class ControllerFactory {
 			public void action(Message msg) {
 				NewQuery query = (NewQuery)msg;
 				controller.setTarget(query.getQuery());
+				controller.log("Set target to " + controller.getTarget());
 				controller.setAlgorithm(query.getHashMethod());
+				controller.log("Set algorithm to " + controller.getAlgorithm());
+				controller.distributeWork();
 			}
 		});
 				
@@ -32,7 +35,8 @@ public class ControllerFactory {
 			public void action(Message msg) {
 				WorkBlockSetup setup = (WorkBlockSetup)msg;
 				controller.setStringLength(setup.getStringLength());
-				controller.log("Length set to " + controller.getId());
+				controller.log("Length set to " + controller.getStringLength());
+				controller.distributeWork();
 			}
 		});
 
@@ -42,6 +46,8 @@ public class ControllerFactory {
 				Node node = new Node(nodeMsg);
 				controller.addNode(node);
 				controller.log(node.getName() + " has joined the collective!");
+				controller.log(node.getName() + " has " + node.getThreadCount() + " threads");
+				controller.distributeWork();
 			}
 		});
 

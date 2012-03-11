@@ -8,19 +8,23 @@ public class Node implements Comparable<Node> {
 	private String name;
 	private int threads;
 	private int jobs;
+	private boolean alive; // nodes may die ay any given time, we must 
+							// prevent assigning further work
 	
 	public Node(NewNodeMessage msg) {
-		this(msg.getName());
+		this(msg.getName(), msg.getCoreCount());
 	}
 
-	public Node(String name) {
+	public Node(String name, int cores) {
 		this.name = name;
-		threads = 1;     // must have at least one, or else, wtf?
+		threads = cores;     // must have at least one, or else, wtf?
 		jobs = 0;
+		alive = true;
 	}
 
 	public int compareTo(Node node) {
-		return Float.compare(getLoad(), node.getLoad());
+		//return Float.compare(getLoad(), node.getLoad());
+		return name.compareTo(node.name);
 	}
 
 	public int setThreads(int n) {
@@ -36,5 +40,9 @@ public class Node implements Comparable<Node> {
 
 	public String getName() {
 		return name;
+	}
+
+	public int getThreadCount() {
+		return threads;
 	}
 }

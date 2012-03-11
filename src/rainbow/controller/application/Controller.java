@@ -2,6 +2,7 @@ package rainbow.controller.application;
 
 import rainbow.controller.events.Event;
 import rainbow.controller.node.Node;
+import rainbow.controller.node.NodeLoadComparator;
 import rainbow.controller.factory.ControllerFactory;
 import rainbowpc.controller.*;
 import rainbowpc.Message;
@@ -13,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.TreeMap;
 import java.util.Timer;
 import java.util.PriorityQueue;
+import java.util.TreeSet;
 
 public class Controller {
 	////////////////////////////////////////////////////////////////////////////
@@ -27,7 +29,9 @@ public class Controller {
 	private int stringLength = 0;
 	private String target;
 	private String algorithm;
-	private PriorityQueue<Node> nodes = new PriorityQueue<Node>(NODE_PREALLOCATE_CAPACITY);
+	private PriorityQueue<Node> candidates = 
+		new PriorityQueue<Node>(NODE_PREALLOCATE_CAPACITY, new NodeLoadComparator());
+	private TreeSet<Node> nodes = new TreeSet<Node>();
 
 	////////////////////////////////////////////////////////////////////////////
 	// Constructors
@@ -55,7 +59,7 @@ public class Controller {
 		return algorithm;
 	}
 
-	public PriorityQueue<Node> getNodes() {
+	public TreeSet<Node> getNodes() {
 		return nodes;
 	}
 
@@ -83,7 +87,8 @@ public class Controller {
 	// Node priority queue management
 	//
 	public void addNode(Node node) {
-		nodes.offer(node);
+		nodes.add(node);
+		candidates.offer(node);
 	}	
 
 	////////////////////////////////////////////////////////////////////////////
@@ -91,11 +96,19 @@ public class Controller {
 	//
 	public void log(String msg) {
 		// System.out for now
-		System.out.println(msg);
+		System.out.println("[*** Controller ***]: " + msg);
 	}
 
 	public void warn(String msg) {
-		System.out.println("[* WARN *] " + msg);
+		System.out.println("[!!! Controller !!!]: " + msg);
+	}
+
+	public int getNodeCount() {
+		return nodes.size();
+	}
+
+	public void distributeWork() {
+		log("Handing out work...");
 	}
 
 	/////////////////////////////////////////////////////////////////////////////
