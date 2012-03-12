@@ -3,7 +3,9 @@ package rainbow.controller.factory;
 import rainbow.controller.application.Controller;
 import rainbow.controller.events.Event;
 import rainbow.controller.node.Node;
+import rainbow.controller.workBlock.WorkBlockPartition;
 import rainbowpc.controller.messages.*;
+import rainbowpc.node.messages.*;
 import rainbowpc.Message;
 import java.util.TreeMap;
 
@@ -26,7 +28,6 @@ public class ControllerFactory {
 				controller.log("Set target to " + controller.getTarget());
 				controller.setAlgorithm(query.getHashMethod());
 				controller.log("Set algorithm to " + controller.getAlgorithm());
-				controller.distributeWork();
 			}
 		});
 				
@@ -36,6 +37,9 @@ public class ControllerFactory {
 				WorkBlockSetup setup = (WorkBlockSetup)msg;
 				controller.setStringLength(setup.getStringLength());
 				controller.log("Length set to " + controller.getStringLength());
+				controller.setBlockLength(Controller.TEST_BLOCK_LENGTH);
+				controller.setAlphabet(Controller.TEST_ALPHA);
+				controller.assignWorkPartition(Controller.TEST_ID, setup.getStartBlockNumber(), setup.getEndBlockNumber(), setup.getStringLength());
 				controller.distributeWork();
 			}
 		});
@@ -47,6 +51,26 @@ public class ControllerFactory {
 				controller.addNode(node);
 				controller.log(node.getName() + " has joined the collective!");
 				controller.log(node.getName() + " has " + node.getThreadCount() + " threads");
+				controller.distributeWork();
+			}
+		});
+
+		eventMapping.put(NodeDisconnectMessage.LABEL, new Event() {
+			public void action(Message msg) {
+				NodeDisconnectMessage info = (NodeDisconnectMessage)msg;
+				controller.gracefulTerminate(info.getId());
+				controller.log("Signalled that " + info.getId() + " has disconnected");
+			}
+		});
+
+		eventMapping.put(WorkMessage.LABEL, new Event() {
+			public void action(Message msg) {
+				WorkMessage details = (WorkMessage)msg;
+				if (details.targetFound()) {
+					controller.markTargetFound(details.getPartitionId(), details.getReversed());
+				} else {
+					controller.markBlockDone(details.getNodeName(), details.getPartitionId(), details.getBlockId());
+				}
 				controller.distributeWork();
 			}
 		});

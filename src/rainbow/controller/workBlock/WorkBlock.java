@@ -3,24 +3,44 @@ package rainbow.controller.workBlock;
 // This is trivial at this point, but we may want to extend this in the
 // future.
 public class WorkBlock implements Comparable<WorkBlock> {
-	private String startString;
 	private int id;
+	private WorkBlockPartition partition;
+	private long startIndex;
+	private long endBlock;
 
-	public WorkBlock(int id, String startString) {
-		this.startString = startString;
+	public WorkBlock(int id, long startIndex, long endBlock, WorkBlockPartition partition) {
 		this.id = id;
+		this.partition = partition;
+		this.startIndex = startIndex;
+		this.endBlock = endBlock;
 	}
 	
-	public String getStartString() {
-		return startString;
+	public long getStartBlockNumber() {
+		return startIndex;
+	}
+
+	public long getEndBlockNumber() {
+		return endBlock;
 	}
 
 	public String toString() {
-		return Integer.toString(id) + ": " + getStartString();
+		return Integer.toString(id) + ": " + getStartBlockNumber();
 	}
 
 	public int getId() {
 		return id;
+	}
+
+	public WorkBlockPartition getPartition() {
+		return partition;
+	}
+
+	public int getPartitionId() {
+		return partition.getPartitionId();
+	}
+
+	public int getStringLength() {
+		return partition.getStringLength();
 	}
 
 	public int compareTo(WorkBlock block) {
@@ -28,6 +48,8 @@ public class WorkBlock implements Comparable<WorkBlock> {
 	}
 
 	public boolean equals(WorkBlock block) {
-		return id == block.id && startString == block.startString;
+		return id == block.id && 
+			startIndex == block.startIndex && 
+			endBlock == block.endBlock;
 	}
 }

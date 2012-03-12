@@ -5,98 +5,50 @@ import java.util.TreeMap;
 import java.util.Collection;
 
 public class WorkBlockPartition {
-	private static final int ALL_BLOCKS = -1;
-
 	private int jobId;
-	private String startString;
+	private int partitionId;
+	private int size;
+	private int stringLength;
+	private long startBlockNumber;
+	private long endBlockNumber;
 	private String target;
 	private LinkedList<WorkBlock> blocks;
 	private TreeMap<Integer, WorkBlock> working;
 
 	public WorkBlockPartition(
 		int jobId, 
-		String startString, 
+		int partitionId,
+		long startBlockNumber,
+		long endBlockNumber,
 		String alphabet, 
 		String target, 
+		int stringLength,
 		int blockLength
 	) {
-		this(jobId, startString, alphabet, target, blockLength, ALL_BLOCKS);
-	}
-
-	public WorkBlockPartition(
-		int jobId, 
-		String startString, 
-		String alphabet, 
-		String target, 
-		int blockLength, 
-		int blockCount
-	) {
 		this.jobId = jobId;
-		this.startString = startString;
+		this.partitionId = partitionId;
+		this.startBlockNumber = startBlockNumber;
+		this.endBlockNumber = endBlockNumber;
 		this.target = target;
-		this.blocks = blockCount == ALL_BLOCKS? 
-			generateAllWorkBlocks(startString, alphabet, blockLength) :
-			generateWorkBlocks(startString, alphabet, blockLength, blockCount);
 		this.working = new TreeMap<Integer, WorkBlock>(); 
+		this.blocks = generateWorkBlocks(startBlockNumber, endBlockNumber, blockLength);
+		this.size = (int)(endBlockNumber - startBlockNumber);
+		this.stringLength = stringLength;
 	}
 
 	///////////////////////////////////////////////////////////////////////////////////
 	// Constructors assisting generating helper methods
 	//
-	private LinkedList<WorkBlock> generateWorkBlocks(
-		String startString, 
-		String alphabet,
-		int blockLength, 
-		int blockCount
-	) {
+	private LinkedList<WorkBlock> generateWorkBlocks(long startBlockNumber, long endBlockNumber, int blockLength) {
 		int blockId = 0;
 		LinkedList<WorkBlock> workBlocks = new LinkedList<WorkBlock>();
-		workBlocks.add(new WorkBlock(blockId++, startString));
-		long stringIndex = convertStringToIndex(startString, alphabet);
-		// skips the first one which we already have
-		for (int i = 1; i < blockCount; i++) {
-			stringIndex += blockLength;
-			String blockString = indexToString(stringIndex, startString.length(), alphabet);
-			workBlocks.add(new WorkBlock(blockId++, blockString));
+		for (long i = startBlockNumber; i < endBlockNumber; i++) {
+			workBlocks.add(new WorkBlock(blockId++, i, i + blockLength, this));
 		}
 		return workBlocks;
 	}
 
-	private LinkedList<WorkBlock> generateAllWorkBlocks(
-		String startString, 
-		String alphabet,
-		int blockLength
-	) {
-		long startIndex = convertStringToIndex(startString, alphabet);
-		long endIndex = (long)Math.pow(alphabet.length(), startString.length());
-		int blockCount = (int)(endIndex - startIndex) / blockLength;
-		return generateWorkBlocks(startString, alphabet, blockLength, blockCount);
-	}
 
-	////////////////////////////////////////////////////////////////////////////////////
-	// String to index and vice versa arithmetic methods
-	//
-	private long convertStringToIndex(String str, String alphabet) {
-		int radix = alphabet.length();
-		long index = 0;
-		for (int i = 0; i < str.length(); i++) {
-			index *= radix;
-			index += alphabet.indexOf(str.charAt(i));
-		}
-		return index;
-	}
-
-	private String indexToString(long stringIndex, int stringLength, String alphabet) {
-		StringBuilder builder = new StringBuilder(stringLength);
-		long radix = alphabet.length();
-		for (int i = 0; i < stringLength; i++) {
-			int charIndex = (int)(stringIndex % radix);
-			stringIndex /= radix;
-			builder.append(alphabet.charAt(charIndex));
-		}
-		builder.reverse();
-		return builder.toString();
-	}
 
 	/////////////////////////////////////////////////////////////////////////////////////
 	// WorkBlockParition interaction methods
@@ -126,19 +78,71 @@ public class WorkBlockPartition {
 		WorkBlock block = working.remove(jobId);
 		if (block != null) {
 			blocks.add(block);
+			System.out.println(jobId + " requeue!");
 			return true;
 		}
 		return false;
 	}
+	
+	public int getPartitionId() {
+		return partitionId;
+	}
 
+	public int getJobId() {
+		return jobId;
+	}
+
+	public int getStringLength() {
+		return stringLength;
+	}
+
+	public long getStartBlockNumber() {
+		return startBlockNumber;
+	}
+
+	public long getEndBlockNumber() {
+		return endBlockNumber;
+	}
+	
+	public int getSize() {
+		return size;
+	}
+
+	public int getCurrentSize() {
+		return getWaitingSize() + getWorkingSize();
+	}
+
+	public int getWaitingSize() {
+		return blocks.size();
+	}
+
+	public int getWorkingSize() {
+		return working.size();
+	}
+
+	public boolean isDone() {
+		return getCurrentSize() == 0;
+	}
+
+	public boolean hasUnassignedWork() {
+		return getWaitingSize() > 0;
+	}
+
+	public WorkBlock markBlockComplete(int blockId) {
+		return working.remove(blockId);
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////
+	// Main test method
+	//
 	public static void main(String[] args) {
-		WorkBlockPartition test = new WorkBlockPartition(0, "c", "abcde", "aa", 1);
+		WorkBlockPartition test = new WorkBlockPartition(0, 0, 0, 1, "abcde", "aa", 2, 1);
 		// expected output is c, d, e
 		for (WorkBlock block : test.getBlocks()) {
 			System.out.println(block);
 		}
 
-		test = new WorkBlockPartition(1, "aaa", "ab", "hash", 1);
+		test = new WorkBlockPartition(1, 1, 0, 999, "abcde", "hash", 10, 1);
 		for (WorkBlock block : test.getBlocks()) {
 			System.out.println(block);
 		}
