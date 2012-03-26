@@ -51,7 +51,10 @@ public class ControllerMappingFactory {
 			@Override
 			public void execute(Message message) {
 				WorkBlockSetup workBlock = (WorkBlockSetup) message;
-				Logger.getGlobal().log(Level.INFO, "WorkBlockSetup recieved");
+				System.out.println(String.format("WorkBlockSetup recieved (%s,%s,%s)",
+						workBlock.getStartBlockNumber(),
+						workBlock.getEndBlockNumber(),
+						workBlock.getStringLength()));
 				controller.bruteForce(workBlock);
 			}
 		});
