@@ -1,160 +1,95 @@
 package rainbow.controller.application;
 
-import rainbow.controller.events.Event;
-import rainbow.controller.node.Node;
-import rainbow.controller.factory.ControllerFactory;
-import rainbowpc.controller.*;
-import rainbowpc.Message;
-import rainbowpc.RainbowException;
-import rainbowpc.controller.messages.*;
 import java.io.IOException;
-import java.util.concurrent.Executor;
+import java.util.HashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.TreeMap;
-import java.util.Timer;
-import java.util.PriorityQueue;
+import rainbowpc.Message;
+import rainbowpc.controller.ControllerProtocol;
+import rainbowpc.controller.messages.*;
+import rainbowpc.scheduler.messages.QueryFound;
+import rainbowpc.scheduler.messages.WorkBlockComplete;
 
-public class Controller {
-	////////////////////////////////////////////////////////////////////////////
-	// Attributes
-	//
-	private static final int NODE_REGISTER_TIMEOUT = 5000; //5 sec
-	private static final int NODE_PREALLOCATE_CAPACITY = 50;
+public class Controller extends Thread {
 
-	private ControllerProtocol protocol;
+	ExecutorService executor;
+	ControllerProtocol protocol;
+	NewQuery query;
+	BruteForcer current;
+	HashMap<String, Action> mapping;
 
-	private String id = "uninitialized";
-	private int stringLength = 0;
-	private String target;
-	private String algorithm;
-	private PriorityQueue<Node> nodes = new PriorityQueue<Node>(NODE_PREALLOCATE_CAPACITY);
-
-	////////////////////////////////////////////////////////////////////////////
-	// Constructors
-	//
-	public Controller(ControllerProtocol protocol) {
-		this.protocol = protocol;
+	public Controller() {
+		this("localhost");
 	}
 
-	////////////////////////////////////////////////////////////////////////////
-	// Getters
-	//	
-	public String getId() {
-		return id;
+	public Controller(String host) {
+		executor = Executors.newSingleThreadExecutor();
+		try {
+			protocol = new ControllerProtocol(host);
+		} catch (IOException e) {
+			System.out.println("Could not connect to scheduler, has it been started?");
+			System.exit(1);
+		}
+		mapping = ControllerMappingFactory.createMapping(this);
 	}
 
-	public int getStringLength() {
-		return stringLength;
+	@Override
+	public void start() {
+		super.start();
+		executor.execute(protocol);
 	}
 
-	public String getTarget() {
-		return target;
-	}
-
-	public String getAlgorithm() {
-		return algorithm;
-	}
-
-	public PriorityQueue<Node> getNodes() {
-		return nodes;
-	}
-
-	////////////////////////////////////////////////////////////////////////////
-	// Setters
-	//
-
-	public void setId(String id) {
-		this.id = id;
-	}
-
-	public void setStringLength(int length) {
-		stringLength = length;
-	}
-
-	public void setTarget(String target) {
-		this.target = target;
-	}
-
-	public void setAlgorithm(String algorithm) {
-		this.algorithm = algorithm;
-	}
-
-	////////////////////////////////////////////////////////////////////////////
-	// Node priority queue management
-	//
-	public void addNode(Node node) {
-		nodes.offer(node);
-	}	
-
-	////////////////////////////////////////////////////////////////////////////
-	// Helper methods
-	//
-	public void log(String msg) {
-		// System.out for now
-		System.out.println(msg);
-	}
-
-	public void warn(String msg) {
-		System.out.println("[* WARN *] " + msg);
-	}
-
-	/////////////////////////////////////////////////////////////////////////////
-	// Main loop
-	//
-	public void run(TreeMap<String, Event> eventMapping) {
-		Executor protocolExecutor = Executors.newSingleThreadExecutor();
-		protocolExecutor.execute(protocol);
-		protocol.setInterruptThread(Thread.currentThread());
+	@Override
+	public void run() {
 		while (true) {
 			try {
-				Message msg = protocol.getMessage();
-				Event event = eventMapping.get(msg.getMethod());
-				if (event != null) {
-					event.run(msg);
-				}
-				else {
-					warn("Message with method " + msg.getMethod() + " dropped");
-				}
-			}
-			catch (InterruptedException e) {
+				Message message = protocol.getMessage();
+				Action action = mapping.get(message.getMethod());
+				action.execute(message);
+			} catch (InterruptedException ie) {
+				interrupt();
 				break;
 			}
-		}	
-		try {
-			protocol.shutdown();
 		}
-		catch (Exception e) {}
+	}
+	BruteForceEventListener listener = new BruteForceEventListener() {
+
+		@Override
+		public void matchFound(String match) {
+			try {
+				protocol.sendMessage(new QueryFound(protocol.getId(), query, match));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		@Override
+		public void workBlockComplete(WorkBlockSetup b) {
+			try {
+				protocol.sendMessage(new WorkBlockComplete(protocol.getId(), 0, b));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	};
+
+	public void bruteForce(WorkBlockSetup block) {
+		current = new BruteForcer(query, block, listener);
+		current.start();
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////
-	// Static main entry methods
-	//
-	private static boolean hasValidArguments(String[] args) {
-		return args.length == 1;
+	@Override
+	public void interrupt() {
+		super.interrupt();
+		protocol.shutdown();
+		executor.shutdown();
 	}
 
-	private static ControllerProtocol connectToScheduler (String host) {
-		try {
-			return new ControllerProtocol(host);
+	public static void main(String[] s) {
+		if (s.length > 0) {
+			new Controller(s[0]).start();
+		} else {
+			new Controller().start();
 		}
-		// we don't care what exception is raised, just that we can't connect
-		catch (Exception e) {
-		}
-		return null;
-	}
-
-	public static void main(String[] args) {
-		if (!hasValidArguments(args)) {
-			System.err.println("Controller takes the scheduler host as its only argument");
-			System.exit(1);
-		}
-		ControllerProtocol protocol = connectToScheduler(args[0]);
-		if (protocol == null) {
-			System.err.println("Failed to connect o scheduler " + args[0]);
-			System.exit(1);
-		}
-		Controller application = new Controller(protocol);
-		application.run(ControllerFactory.getDefaultMapping(application));
-		System.exit(0);
 	}
 }
