@@ -21,13 +21,13 @@ import rainbowpc.controller.messages.WorkBlockSetup;
 public class ControllerMappingFactory {
 
 	public static HashMap<String, Action> createMapping(final Controller controller) {
-		HashMap<String, Action> mapping = new HashMap<>();
+		HashMap<String, Action> mapping = new HashMap<String, Action>();
 		mapping.put(NewQuery.LABEL, new Action() {
 
 			@Override
 			public void execute(Message message) {
 				controller.query = (NewQuery) message;
-				Logger.getGlobal().log(Level.INFO, "New Query recieved");
+				Logger.getAnonymousLogger().log(Level.INFO, "New Query recieved");
 			}
 		});
 		mapping.put(StopQuery.LABEL, new Action() {
@@ -36,14 +36,14 @@ public class ControllerMappingFactory {
 			public void execute(Message message) {
 				controller.current.interrupt();
 				controller.query = null;
-				Logger.getGlobal().log(Level.INFO, "Stop Query recieved");
+				Logger.getAnonymousLogger().log(Level.INFO, "Stop Query recieved");
 			}
 		});
 		mapping.put(ControllerBootstrapMessage.LABEL, new Action() {
 
 			@Override
 			public void execute(Message message) {
-				Logger.getGlobal().log(Level.INFO, "ControllerBootstrapMessage recieved");
+				Logger.getAnonymousLogger().log(Level.INFO, "ControllerBootstrapMessage recieved");
 			}
 		});
 		mapping.put(WorkBlockSetup.LABEL, new Action() {
