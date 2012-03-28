@@ -25,7 +25,7 @@ public class Controller extends Thread {
 	public Controller(String host) {
 		executor = Executors.newSingleThreadExecutor();
 		try {
-			protocol = new ControllerProtocol(host);
+			protocol = new ControllerProtocol(host, this);
 		} catch (IOException e) {
 			System.out.println("Could not connect to scheduler, has it been started?");
 			System.exit(1);
@@ -75,15 +75,20 @@ public class Controller extends Thread {
 
 	public void bruteForce(WorkBlockSetup block) {
 		current = new BruteForcer(query, block, listener);
-		current.start();
+		current.start();  
+		try {
+			current.join();
+		} catch (InterruptedException e) {
+			current.interrupt();
+		}
 	}
 
-	@Override
-	public void interrupt() {
-		super.interrupt();
-		protocol.shutdown();
-		executor.shutdown();
-	}
+//	@Override
+//	public void interrupt() {
+//		super.interrupt();
+//		protocol.shutdown();
+//		executor.shutdown();
+//	}
 
 	public static void main(String[] s) {
 		if (s.length > 0) {
