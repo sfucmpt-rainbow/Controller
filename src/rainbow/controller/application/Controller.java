@@ -41,14 +41,14 @@ public class Controller extends Thread {
 
 	@Override
 	public void run() {
-		while (true) {
+		while (protocol.isAlive()) {
 			try {
 				Message message = protocol.getMessage();
 				Action action = mapping.get(message.getMethod());
 				action.execute(message);
 			} catch (InterruptedException ie) {
-				interrupt();
-				break;
+			//	interrupt();
+			//	break;
 			}
 		}
 	}
@@ -90,11 +90,10 @@ public class Controller extends Thread {
 //		executor.shutdown();
 //	}
 
-	public static void main(String[] s) {
-		if (s.length > 0) {
-			new Controller(s[0]).start();
-		} else {
-			new Controller().start();
-		}
+	public static void main(String[] s) throws InterruptedException {
+		Controller controller = s.length > 0? new Controller(s[0]) : new Controller();
+		controller.start();
+		controller.join();
+		System.exit(0);
 	}
 }
